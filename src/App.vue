@@ -29,9 +29,9 @@
                     正在录制快捷键
                   </div>
                   <div class="tips-keys">
-                    <el-tag v-for="key in pressedKeys" :key="key" size="large" type="success" effect="dark">
+                    <span v-for="key in pressedKeys" :key="key" class="key-bubble key-bubble-success">
                       {{ getKeyLabel(key) }}
-                    </el-tag>
+                    </span>
                     <span v-if="pressedKeys.length === 0" class="waiting-text">等待输入...</span>
                   </div>
                   <div class="tips-actions">
@@ -44,11 +44,12 @@
                 <div v-if="recordStep === 2" class="tips-content">
                   <div class="tips-title">输入快捷键描述</div>
                   <div class="tips-keys">
-                    <el-tag v-for="key in pressedKeys" :key="key" size="small" type="info">
+                    <span v-for="key in pressedKeys" :key="key" class="key-bubble key-bubble-info">
                       {{ getKeyLabel(key) }}
-                    </el-tag>
+                    </span>
                   </div>
                   <el-input 
+                    ref="descriptionInputRef"
                     v-model="currentDescription" 
                     placeholder="请输入描述"
                     size="small"
@@ -121,9 +122,9 @@
             <el-table-column type="index" label="序号" width="80" align="center" />
             <el-table-column prop="keys" label="快捷键" width="250" align="center" sortable>
               <template #default="{ row }">
-                <el-tag v-for="key in row.displayKeys" :key="key" style="margin: 2px;" type="info">
+                <span v-for="key in row.displayKeys" :key="key" class="key-bubble key-bubble-table">
                   {{ key }}
-                </el-tag>
+                </span>
               </template>
             </el-table-column>
             <el-table-column prop="description" label="描述" align="center" sortable>
@@ -189,19 +190,19 @@ const keyboardLayout = ref([
   ],
   // 第二行 - 数字键区
   [
-    { code: 'Backquote', label: '`\n~', width: 'w1', offset: 0 },
-    { code: 'Digit1', label: '1\n!', width: 'w1', offset: 0 },
-    { code: 'Digit2', label: '2\n@', width: 'w1', offset: 0 },
-    { code: 'Digit3', label: '3\n#', width: 'w1', offset: 0 },
-    { code: 'Digit4', label: '4\n$', width: 'w1', offset: 0 },
-    { code: 'Digit5', label: '5\n%', width: 'w1', offset: 0 },
-    { code: 'Digit6', label: '6\n^', width: 'w1', offset: 0 },
-    { code: 'Digit7', label: '7\n&', width: 'w1', offset: 0 },
-    { code: 'Digit8', label: '8\n*', width: 'w1', offset: 0 },
-    { code: 'Digit9', label: '9\n(', width: 'w1', offset: 0 },
-    { code: 'Digit0', label: '0\n)', width: 'w1', offset: 0 },
-    { code: 'Minus', label: '-\n_', width: 'w1', offset: 0 },
-    { code: 'Equal', label: '=\n+', width: 'w1', offset: 0 },
+    { code: 'Backquote', label: '~\n`', width: 'w1', offset: 0 },
+    { code: 'Digit1', label: '!\n1', width: 'w1', offset: 0 },
+    { code: 'Digit2', label: '@\n2', width: 'w1', offset: 0 },
+    { code: 'Digit3', label: '#\n3', width: 'w1', offset: 0 },
+    { code: 'Digit4', label: '$\n4', width: 'w1', offset: 0 },
+    { code: 'Digit5', label: '%\n5', width: 'w1', offset: 0 },
+    { code: 'Digit6', label: '^\n6', width: 'w1', offset: 0 },
+    { code: 'Digit7', label: '&\n7', width: 'w1', offset: 0 },
+    { code: 'Digit8', label: '*\n8', width: 'w1', offset: 0 },
+    { code: 'Digit9', label: '(\n9', width: 'w1', offset: 0 },
+    { code: 'Digit0', label: ')\n0', width: 'w1', offset: 0 },
+    { code: 'Minus', label: '_\n-', width: 'w1', offset: 0 },
+    { code: 'Equal', label: '+\n=', width: 'w1', offset: 0 },
     { code: 'Backspace', label: 'Backspace', width: 'w2', offset: 0, gap: 'gap-after' },
     { code: 'Insert', label: 'Insert', width: 'w1', offset: 0 },
     { code: 'Home', label: 'Home', width: 'w1', offset: 0 },
@@ -220,9 +221,9 @@ const keyboardLayout = ref([
     { code: 'KeyI', label: 'I', width: 'w1', offset: 0 },
     { code: 'KeyO', label: 'O', width: 'w1', offset: 0 },
     { code: 'KeyP', label: 'P', width: 'w1', offset: 0 },
-    { code: 'BracketLeft', label: '[\n{', width: 'w1', offset: 0 },
-    { code: 'BracketRight', label: ']\n}', width: 'w1', offset: 0 },
-    { code: 'Backslash', label: '\\\n|', width: 'w1-5', offset: 0, gap: 'gap-after' },
+    { code: 'BracketLeft', label: '{\n[', width: 'w1', offset: 0 },
+    { code: 'BracketRight', label: '}\n]', width: 'w1', offset: 0 },
+    { code: 'Backslash', label: '|\n\\', width: 'w1-5', offset: 0, gap: 'gap-after' },
     { code: 'Delete', label: 'Delete', width: 'w1', offset: 0 },
     { code: 'End', label: 'End', width: 'w1', offset: 0 },
     { code: 'PageDown', label: 'PgDn', width: 'w1', offset: 0 }
@@ -239,8 +240,8 @@ const keyboardLayout = ref([
     { code: 'KeyJ', label: 'J', width: 'w1', offset: 0 },
     { code: 'KeyK', label: 'K', width: 'w1', offset: 0 },
     { code: 'KeyL', label: 'L', width: 'w1', offset: 0 },
-    { code: 'Semicolon', label: ';\n:', width: 'w1', offset: 0 },
-    { code: 'Quote', label: "'\n\"", width: 'w1', offset: 0 },
+    { code: 'Semicolon', label: ':\n;', width: 'w1', offset: 0 },
+    { code: 'Quote', label: "\"\n'", width: 'w1', offset: 0 },
     { code: 'Enter', label: 'Enter', width: 'w2-25', offset: 0 }
   ],
   // 第五行 - ZXCV 行
@@ -253,9 +254,9 @@ const keyboardLayout = ref([
     { code: 'KeyB', label: 'B', width: 'w1', offset: 0 },
     { code: 'KeyN', label: 'N', width: 'w1', offset: 0 },
     { code: 'KeyM', label: 'M', width: 'w1', offset: 0 },
-    { code: 'Comma', label: ',\n<', width: 'w1', offset: 0 },
-    { code: 'Period', label: '.\n>', width: 'w1', offset: 0 },
-    { code: 'Slash', label: '/\n?', width: 'w1', offset: 0 },
+    { code: 'Comma', label: '<\n,', width: 'w1', offset: 0 },
+    { code: 'Period', label: '>\n.', width: 'w1', offset: 0 },
+    { code: 'Slash', label: '?\n/', width: 'w1', offset: 0 },
     { code: 'ShiftRight', label: 'Shift', width: 'w2-75', offset: 0, gap: 'esc-gap-after' },
     { code: 'ArrowUp', label: '↑', width: 'w1', offset: 0 }
   ],
@@ -355,6 +356,7 @@ const keyboardRef = ref(null)
 const tableRef = ref(null)
 const addButtonRef = ref(null)
 const recordingTipsRef = ref(null)
+const descriptionInputRef = ref(null)
 
 // 获取按键标签
 const getKeyLabel = (code) => {
@@ -430,12 +432,17 @@ const setBubbleRef = (el, shortcut) => {
     })
     const index = sameKeyShortcuts.findIndex(s => s.id === shortcut.id)
     
+    // 计算 z-index：基础值 + 同组内索引 - 水平位置（让左边的气泡在上面）
+    const baseZIndex = 1000
+    const horizontalPriority = Math.floor(left / 10) // 位置越靠左，优先级越高
+    const zIndex = baseZIndex - horizontalPriority + index
+    
     // 设置气泡位置（多个气泡上下堆叠）
     el.style.position = 'absolute'
     el.style.left = `${left}px`
     el.style.top = `${top - (index * 32)}px`  // 每个气泡间隔32px
     el.style.transform = 'translate(-50%, -100%)'
-    el.style.zIndex = `${10 + index}`
+    el.style.zIndex = zIndex
   })
 }
 
@@ -485,7 +492,7 @@ const startAddShortcut = () => {
   })
 }
 
-// 定位录制提示框到按钮左上方
+// 定位录制提示框到按钮正左边
 const positionRecordingTips = () => {
   const button = document.getElementById('add-shortcut-btn')
   const tips = recordingTipsRef.value
@@ -494,11 +501,11 @@ const positionRecordingTips = () => {
   
   const buttonRect = button.getBoundingClientRect()
   
-  // 设置为固定定位，相对于视口
+  // 设置为固定定位，相对于视口，出现在按钮正左边
   tips.style.position = 'fixed'
   tips.style.left = `${buttonRect.left - 20}px`
-  tips.style.top = `${buttonRect.top}px`
-  tips.style.transform = 'translate(-100%, -10px)'
+  tips.style.top = `${buttonRect.top + buttonRect.height / 2}px`
+  tips.style.transform = 'translate(-100%, -50%)'
 }
 
 // 取消录制
@@ -525,8 +532,14 @@ const finishRecording = () => {
   
   // 标准化按键顺序
   pressedKeys.value = normalizeKeys(pressedKeys.value)
-  
   recordStep.value = 2
+  
+  // 聚焦到描述输入框
+  nextTick(() => {
+    if (descriptionInputRef.value) {
+      descriptionInputRef.value.focus()
+    }
+  })
 }
 
 // 确认添加
@@ -909,7 +922,8 @@ html, body {
   content: '';
   position: absolute;
   right: -12px;
-  top: 20px;
+  top: 50%;
+  transform: translateY(-50%);
   width: 0;
   height: 0;
   border-left: 12px solid #667eea;
@@ -968,6 +982,10 @@ html, body {
   display: flex;
   gap: 8px;
   justify-content: flex-end;
+}
+
+.tips-actions .el-button {
+  padding: 8px 16px;
 }
 
 .slide-fade-enter-active {
@@ -1040,6 +1058,27 @@ html, body {
   box-shadow: 0 0 20px rgba(59, 130, 246, 0.6);
 }
 
+/* 控制键按下时的下边框颜色 */
+.key.active[id="key-ControlLeft"],
+.key.active[id="key-ControlRight"] {
+  border-bottom: 3px solid #3b82f6;
+}
+
+.key.active[id="key-ShiftLeft"],
+.key.active[id="key-ShiftRight"] {
+  border-bottom: 3px solid #10b981;
+}
+
+.key.active[id="key-AltLeft"],
+.key.active[id="key-AltRight"] {
+  border-bottom: 3px solid #ef4444;
+}
+
+.key.active[id="key-MetaLeft"],
+.key.active[id="key-MetaRight"] {
+  border-bottom: 3px solid #f59e0b;
+}
+
 /* 移除已添加快捷键的特殊样式 */
 .key.has-shortcut {
   /* 不显示任何特殊样式 */
@@ -1057,7 +1096,7 @@ html, body {
   position: absolute;
   bottom: 6px;
   font-size: 10px;
-  color: #fbbf24;
+  color: snow;
   font-weight: bold;
   max-width: 90%;
   overflow: hidden;
@@ -1183,7 +1222,8 @@ html, body {
 
 /* 表格样式 */
 .table-card {
-  margin-top: 20px;
+  margin: auto;
+  width: 900px;
 }
 
 :deep(.el-table) {
@@ -1207,7 +1247,7 @@ html, body {
 }
 
 :deep(.el-table__body tr:hover > td) {
-  background: #1f2937 !important;
+  background: #141b2d !important;
 }
 
 :deep(.el-table--border::after),
@@ -1248,6 +1288,35 @@ html, body {
 :deep(.el-button--info) {
   background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
   border-color: #6366f1;
+}
+
+/* 自定义按键气泡样式 - 替代 el-tag */
+.key-bubble {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  margin: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  border-radius: 4px;
+  white-space: nowrap;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.key-bubble-success {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.key-bubble-info {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+}
+
+.key-bubble-table {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  font-size: 11px;
+  padding: 3px 7px;
 }
 
 :deep(.el-tag) {
