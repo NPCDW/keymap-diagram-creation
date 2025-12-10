@@ -28,6 +28,10 @@
                     <el-icon class="recording-icon"><VideoCamera /></el-icon>
                     正在录制快捷键
                   </div>
+                  <div class="tips-hint">
+                    <el-icon class="hint-icon"><InfoFilled /></el-icon>
+                    <span>💡 小技巧：按下控制键（如Ctrl、Shift、Alt）后可先松开，再按其他键，这样可以避免触发浏览器快捷键哦～</span>
+                  </div>
                   <div class="tips-keys">
                     <span v-for="key in pressedKeys" :key="key" class="key-bubble key-bubble-success">
                       {{ getKeyLabel(key) }}
@@ -161,7 +165,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Download, VideoCamera, Delete } from '@element-plus/icons-vue'
+import { Plus, Download, VideoCamera, Delete, InfoFilled } from '@element-plus/icons-vue'
 import html2canvas from 'html2canvas'
 
 // 本地存储的键名
@@ -959,6 +963,27 @@ html, body {
     opacity: 0.7;
     transform: scale(1.1);
   }
+}
+
+.tips-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.9);
+  border-left: 3px solid #fbbf24;
+  margin-top: 4px;
+}
+
+.hint-icon {
+  color: #fbbf24;
+  flex-shrink: 0;
+  margin-top: 2px;
+  font-size: 16px;
 }
 
 .tips-keys {
