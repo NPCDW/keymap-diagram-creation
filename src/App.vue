@@ -6,22 +6,23 @@
       </el-header>
       <el-main>
         <el-card shadow="never" class="keyboard-card">
-          <div style="text-align: center; margin-bottom: 20px;">
-            <el-button type="primary" @click="startAddShortcut" :disabled="isRecording">
+          <div style="text-align: center; margin-bottom: 20px; position: relative;">
+            <el-button id="add-shortcut-btn" ref="addButtonRef" type="primary" @click="startAddShortcut" :disabled="isRecording" style="padding: 12px 24px; margin: 0 8px;">
               <el-icon><Plus /></el-icon>
               添加键盘快捷键
             </el-button>
-            <el-button type="success" @click="exportImage" :disabled="shortcuts.length === 0">
+            <el-button type="success" @click="exportImage" :disabled="shortcuts.length === 0" style="padding: 12px 24px; margin: 0 8px;">
               <el-icon><Download /></el-icon>
               导出图片
             </el-button>
-          </div>
-
-          <!-- 键盘示意图 -->
-          <div ref="keyboardRef" id="keyboard-container" class="keyboard-wrapper">
-            <!-- 操作提示卡片（不使用弹窗） -->
+            <el-button type="danger" @click="resetAllData" :disabled="shortcuts.length === 0" style="padding: 12px 24px; margin: 0 8px;">
+              <el-icon><Delete /></el-icon>
+              重置所有数据
+            </el-button>
+            
+            <!-- 操作提示卡片（定位在添加按钮左上方） -->
             <transition name="slide-fade">
-              <div v-if="isRecording" class="recording-tips">
+              <div v-if="isRecording" ref="recordingTipsRef" class="recording-tips">
                 <div v-if="recordStep === 1" class="tips-content">
                   <div class="tips-title">
                     <el-icon class="recording-icon"><VideoCamera /></el-icon>
@@ -63,7 +64,10 @@
                 </div>
               </div>
             </transition>
+          </div>
 
+          <!-- 键盘示意图 -->
+          <div ref="keyboardRef" id="keyboard-container" class="keyboard-wrapper">
             <div class="keyboard-87">
               <div v-for="(row, rowIndex) in keyboardLayout" :key="rowIndex" class="keyboard-row">
                 <button 
@@ -113,7 +117,7 @@
               <span>快捷键列表</span>
             </div>
           </template>
-          <el-table :data="shortcuts" border row-key="id">
+          <el-table :data="shortcuts" border row-key="id" @row-drop="handleRowDrop">
             <el-table-column type="index" label="序号" width="80" align="center" />
             <el-table-column prop="keys" label="快捷键" width="250" align="center" sortable>
               <template #default="{ row }">
@@ -128,26 +132,20 @@
                 <span v-else>{{ row.description }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="220" align="center" fixed="right">
-              <template #default="{ row, $index }">
-                <div style="display: flex; gap: 6px; justify-content: center; flex-wrap: wrap;">
-                  <el-button v-if="!row.editing" type="primary" size="small" @click="startEdit(row)">
+            <el-table-column label="操作" width="180" align="center" fixed="right">
+              <template #default="{ row }">
+                <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; padding: 8px 0;">
+                  <el-button v-if="!row.editing" type="primary" size="small" @click="startEdit(row)" style="padding: 8px 15px;">
                     编辑
                   </el-button>
-                  <el-button v-if="row.editing" type="success" size="small" @click="saveEdit(row)">
+                  <el-button v-if="row.editing" type="success" size="small" @click="saveEdit(row)" style="padding: 8px 15px;">
                     保存
                   </el-button>
-                  <el-button v-if="row.editing" type="info" size="small" @click="cancelEdit(row)">
+                  <el-button v-if="row.editing" type="info" size="small" @click="cancelEdit(row)" style="padding: 8px 15px;">
                     取消
                   </el-button>
-                  <el-button v-if="!row.editing" type="danger" size="small" @click="deleteShortcut(row)">
+                  <el-button v-if="!row.editing" type="danger" size="small" @click="deleteShortcut(row)" style="padding: 8px 15px;">
                     删除
-                  </el-button>
-                  <el-button v-if="!row.editing && $index > 0" type="info" size="small" @click="moveUp($index)" :icon="'ArrowUp'">
-                    上移
-                  </el-button>
-                  <el-button v-if="!row.editing && $index < shortcuts.length - 1" type="info" size="small" @click="moveDown($index)" :icon="'ArrowDown'">
-                    下移
                   </el-button>
                 </div>
               </template>
@@ -161,9 +159,12 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
-import { ElMessage } from 'element-plus'
-import { Plus, Download, VideoCamera } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Plus, Download, VideoCamera, Delete } from '@element-plus/icons-vue'
 import html2canvas from 'html2canvas'
+
+// 本地存储的键名
+const STORAGE_KEY = 'keyboard-shortcuts-data'
 
 // 87键键盘布局（按照图片布局，精确对齐）
 const keyboardLayout = ref([
@@ -322,14 +323,38 @@ const normalizeKeys = (keys) => {
   return result
 }
 
+// 从本地存储加载数据
+const loadShortcutsFromStorage = () => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (stored) {
+      return JSON.parse(stored)
+    }
+  } catch (error) {
+    console.error('加载数据失败:', error)
+  }
+  return []
+}
+
+// 保存数据到本地存储
+const saveShortcutsToStorage = () => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(shortcuts.value))
+  } catch (error) {
+    console.error('保存数据失败:', error)
+  }
+}
+
 // 状态
-const shortcuts = ref([])
+const shortcuts = ref(loadShortcutsFromStorage())
 const isRecording = ref(false)
 const recordStep = ref(1) // 1: 记录按键, 2: 输入描述
 const pressedKeys = ref([])
 const currentDescription = ref('')
 const keyboardRef = ref(null)
 const tableRef = ref(null)
+const addButtonRef = ref(null)
+const recordingTipsRef = ref(null)
 
 // 获取按键标签
 const getKeyLabel = (code) => {
@@ -357,16 +382,28 @@ const getSingleKeyDescription = (code) => {
 
 // 组合键快捷键（用于显示气泡）- 有修饰键或多个键的情况
 const comboShortcuts = computed(() => {
-  return shortcuts.value.filter(s => {
+  // 按照主键code分组
+  const grouped = {}
+  
+  shortcuts.value.forEach(s => {
     const mainKeys = s.keys.filter(k => !modifierKeys[k])
     // 如果有修饰键，或主键多于1个，则显示气泡
-    return s.keys.length > mainKeys.length || mainKeys.length > 1
+    if (s.keys.length > mainKeys.length || mainKeys.length > 1) {
+      const mainKey = mainKeys[0]
+      if (!grouped[mainKey]) {
+        grouped[mainKey] = []
+      }
+      grouped[mainKey].push(s)
+    }
   })
+  
+  // 展平分组，保持分组顺序
+  return Object.values(grouped).flat()
 })
 
-// 设置气泡位置（基于按键DOM元素ID）
+// 设置气泡位置（基于按键DOM元素ID）- 支持多个气泡上下堆叠，从按键内部上方1/3处引出
 const setBubbleRef = (el, shortcut) => {
-  if (!el) return
+  if (!el || !keyboardRef.value) return
   
   nextTick(() => {
     // 找到主按键（非修饰键）
@@ -378,24 +415,31 @@ const setBubbleRef = (el, shortcut) => {
     const keyElement = document.getElementById(`key-${mainKey}`)
     if (!keyElement) return
     
-    // 获取按键位置
-    const keyRect = keyElement.getBoundingClientRect()
-    const containerRect = keyboardRef.value.getBoundingClientRect()
+    // 获取按键位置 - 使用 offsetLeft/offsetTop 获取相对于键盘容器的位置
+    const keyboardContainer = keyboardRef.value
     
     // 计算相对于键盘容器的位置
-    const left = keyRect.left - containerRect.left + keyRect.width / 2
-    const top = keyRect.top - containerRect.top
+    let left = keyElement.offsetLeft + keyElement.offsetWidth / 2
+    // 从按键内部上方1/3处引出，再向上偏移2px
+    let top = keyElement.offsetTop + keyElement.offsetHeight / 3 - 2
     
-    // 设置气泡位置（在按键正上方）
+    // 计算该快捷键在同一主键组中的索引
+    const sameKeyShortcuts = comboShortcuts.value.filter(s => {
+      const sMainKeys = s.keys.filter(k => !modifierKeys[k])
+      return sMainKeys[0] === mainKey
+    })
+    const index = sameKeyShortcuts.findIndex(s => s.id === shortcut.id)
+    
+    // 设置气泡位置（多个气泡上下堆叠）
     el.style.position = 'absolute'
     el.style.left = `${left}px`
-    el.style.top = `${top - 10}px`  // 按键上方10px
+    el.style.top = `${top - (index * 32)}px`  // 每个气泡间隔32px
     el.style.transform = 'translate(-50%, -100%)'
-    el.style.zIndex = '10'
+    el.style.zIndex = `${10 + index}`
   })
 }
 
-// 监听shortcuts变化，重新定位气泡
+// 监听shortcuts变化，重新定位气泡并保存到本地存储
 watch(shortcuts, () => {
   nextTick(() => {
     // 延迟一帧确保DOM更新完成
@@ -408,6 +452,8 @@ watch(shortcuts, () => {
       })
     }, 50)
   })
+  // 保存到本地存储
+  saveShortcutsToStorage()
 }, { deep: true })
 
 // 获取按键宽度（放大1.4倍）
@@ -432,6 +478,27 @@ const startAddShortcut = () => {
   recordStep.value = 1
   pressedKeys.value = []
   currentDescription.value = ''
+  
+  // 在下一帧定位弹窗
+  nextTick(() => {
+    positionRecordingTips()
+  })
+}
+
+// 定位录制提示框到按钮左上方
+const positionRecordingTips = () => {
+  const button = document.getElementById('add-shortcut-btn')
+  const tips = recordingTipsRef.value
+  
+  if (!button || !tips) return
+  
+  const buttonRect = button.getBoundingClientRect()
+  
+  // 设置为固定定位，相对于视口
+  tips.style.position = 'fixed'
+  tips.style.left = `${buttonRect.left - 20}px`
+  tips.style.top = `${buttonRect.top}px`
+  tips.style.transform = 'translate(-100%, -10px)'
 }
 
 // 取消录制
@@ -498,7 +565,7 @@ const confirmAdd = () => {
     editing: false
   })
   
-  ElMessage.success('快捷键添加成功')
+  // 不显示成功提示
   cancelRecord()
 }
 
@@ -566,22 +633,29 @@ const deleteShortcut = (row) => {
   ElMessage.success('删除成功')
 }
 
-// 上移快捷键
-const moveUp = (index) => {
-  if (index > 0) {
-    const temp = shortcuts.value[index]
-    shortcuts.value[index] = shortcuts.value[index - 1]
-    shortcuts.value[index - 1] = temp
-  }
+// 重置所有数据
+const resetAllData = () => {
+  ElMessageBox.confirm(
+    '确定要清除所有快捷键数据吗？此操作不可恢复！',
+    '警告',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+    }
+  ).then(() => {
+    shortcuts.value = []
+    localStorage.removeItem(STORAGE_KEY)
+    ElMessage.success('已清除所有数据')
+  }).catch(() => {
+    // 用户取消
+  })
 }
 
-// 下移快捷键
-const moveDown = (index) => {
-  if (index < shortcuts.value.length - 1) {
-    const temp = shortcuts.value[index]
-    shortcuts.value[index] = shortcuts.value[index + 1]
-    shortcuts.value[index + 1] = temp
-  }
+// 处理表格行拖拽排序
+const handleRowDrop = () => {
+  // 由于 element-plus 原生不支持拖拽排序，我们需要监听 DOM 事件
+  // 这个函数会在下面的 onMounted 中设置
 }
 
 // 导出图片
@@ -644,6 +718,83 @@ const exportImage = async () => {
 
 onMounted(() => {
   window.addEventListener('keydown', handleKeyDown)
+  
+  // 初始化气泡位置（解决刷新后位置偏移问题）
+  nextTick(() => {
+    setTimeout(() => {
+      const bubbles = document.querySelectorAll('.shortcut-bubble')
+      comboShortcuts.value.forEach((shortcut, index) => {
+        if (bubbles[index]) {
+          setBubbleRef(bubbles[index], shortcut)
+        }
+      })
+    }, 100)
+  })
+  
+  // 初始化表格拖拽排序
+  nextTick(() => {
+    const tbody = document.querySelector('.el-table__body-wrapper tbody')
+    if (!tbody) return
+    
+    let draggingRow = null
+    let draggingIndex = null
+    
+    const handleDragStart = (e) => {
+      if (e.target.tagName !== 'TR') return
+      draggingRow = e.target
+      draggingIndex = Array.from(tbody.children).indexOf(draggingRow)
+      draggingRow.style.opacity = '0.5'
+    }
+    
+    const handleDragEnd = (e) => {
+      if (!draggingRow) return
+      draggingRow.style.opacity = ''
+      draggingRow = null
+      draggingIndex = null
+    }
+    
+    const handleDragOver = (e) => {
+      e.preventDefault()
+      const targetRow = e.target.closest('tr')
+      if (!targetRow || targetRow === draggingRow) return
+      
+      const targetIndex = Array.from(tbody.children).indexOf(targetRow)
+      if (targetIndex === -1 || draggingIndex === null) return
+      
+      if (targetIndex > draggingIndex) {
+        targetRow.after(draggingRow)
+      } else {
+        targetRow.before(draggingRow)
+      }
+      
+      // 更新数据
+      const temp = shortcuts.value[draggingIndex]
+      shortcuts.value.splice(draggingIndex, 1)
+      const newIndex = Array.from(tbody.children).indexOf(draggingRow)
+      shortcuts.value.splice(newIndex, 0, temp)
+      draggingIndex = newIndex
+    }
+    
+    tbody.addEventListener('dragstart', handleDragStart)
+    tbody.addEventListener('dragend', handleDragEnd)
+    tbody.addEventListener('dragover', handleDragOver)
+    
+    // 设置所有行可拖拽
+    Array.from(tbody.children).forEach(row => {
+      row.setAttribute('draggable', 'true')
+      row.style.cursor = 'move'
+    })
+    
+    // 监听 shortcuts 变化，更新可拖拽属性
+    watch(shortcuts, () => {
+      nextTick(() => {
+        Array.from(tbody.children).forEach(row => {
+          row.setAttribute('draggable', 'true')
+          row.style.cursor = 'move'
+        })
+      })
+    }, { deep: true })
+  })
 })
 
 onUnmounted(() => {
@@ -741,19 +892,29 @@ html, body {
   overflow-x: auto;
 }
 
-/* 录制提示卡片 */
+/* 录制提示卡片 - 定位在添加按钮左上方，像气泡 */
 .recording-tips {
-  position: absolute;
-  top: 20px;
-  right: 20px;
+  position: fixed;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-radius: 12px;
   padding: 20px;
   box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
-  z-index: 100;
+  z-index: 1000;
   min-width: 280px;
   max-width: 350px;
   border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.recording-tips::after {
+  content: '';
+  position: absolute;
+  right: -12px;
+  top: 20px;
+  width: 0;
+  height: 0;
+  border-left: 12px solid #667eea;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
 }
 
 .tips-content {
@@ -931,7 +1092,7 @@ html, body {
     margin-right: 116px;
 }
 
-/* 气泡标注 - 极致紧凑设计 */
+/* 气泡标注 - 紧凑设计，左边控制键铺满，右边白色背景 */
 .shortcut-bubble {
   position: absolute;
   z-index: 10;
@@ -940,83 +1101,84 @@ html, body {
 }
 
 .bubble-container {
-  background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
-  border: 2px solid #60a5fa;
-  border-radius: 6px;
-  padding: 4px 8px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.6);
   display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  white-space: nowrap;
+  align-items: stretch;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.6);
 }
 
 .bubble-modifiers {
   display: flex;
-  gap: 3px;
-  padding-right: 6px;
-  border-right: 1px solid #374151;
+  gap: 0;
+  background: transparent;
 }
 
 .modifier-tag {
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-size: 11px;
+  padding: 8px 12px;
+  font-size: 12px;
   font-weight: bold;
   color: #fff;
   white-space: nowrap;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.4);
   text-align: center;
-  min-width: 32px;
+  min-width: 45px;
   line-height: 1.2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .modifier-ctrl {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  background: #3b82f6;
 }
 
 .modifier-shift {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: #10b981;
 }
 
 .modifier-alt {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  background: #ef4444;
 }
 
 .modifier-win {
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  background: #f59e0b;
 }
 
 .bubble-desc {
-  font-size: 12px;
-  color: #e0e0e0;
-  line-height: 1.2;
+  font-size: 10px;
+  color: #1f2937;
+  line-height: 1.3;
   font-weight: 500;
-  padding-right: 2px;
+  padding: 4px 6px;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  max-width: 55px;
+  word-break: break-all;
 }
 
 .bubble-arrow {
   position: absolute;
   left: 50%;
-  bottom: -8px;
+  bottom: -7px;
   transform: translateX(-50%);
   width: 0;
   height: 0;
-  border-left: 8px solid transparent;
-  border-right: 8px solid transparent;
-  border-top: 8px solid #60a5fa;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 7px solid #60a5fa;
 }
 
 .bubble-arrow::after {
   content: '';
   position: absolute;
   left: -6px;
-  top: -10px;
+  top: -8px;
   width: 0;
   height: 0;
   border-left: 6px solid transparent;
   border-right: 6px solid transparent;
-  border-top: 6px solid #111827;
+  border-top: 6px solid #ffffff;
 }
 
 /* 表格样式 */
